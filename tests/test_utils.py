@@ -2,7 +2,6 @@ import os
 import pathlib
 import contextlib
 import shutil
-import torch
 
 from monitors4codegen.multilspy.multilspy_config import MultilspyConfig
 from monitors4codegen.multilspy.multilspy_logger import MultilspyLogger
@@ -35,16 +34,3 @@ def create_test_context(params: dict) -> Iterator[MultilspyContext]:
     finally:
         if os.path.exists(temp_extract_directory):
             shutil.rmtree(temp_extract_directory)
-
-def is_cuda_available() -> bool:
-    """
-    Returns True if CUDA is available, False otherwise
-    """
-    if torch.cuda.is_available():
-        try:
-            t = torch.rand(1).cuda()
-            t = t * 2
-            return True
-        except RuntimeError:
-            return False
-    return False
