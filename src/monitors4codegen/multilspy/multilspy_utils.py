@@ -214,7 +214,7 @@ class PlatformUtils:
                 elif libc == '':
                     # stat the /lib/ld-musl-x86_64.so.1
                     if os.path.exists("/lib/ld-musl-x86_64.so.1"):
-                        platform_id += "-musl-x64"
+                        return PlatformId(PlatformId.LINUX_MUSL_x64)
             return PlatformId(platform_id)
         else:
             raise MultilspyException("Unknown platform: " + system + " " + machine + " " + bitness)
