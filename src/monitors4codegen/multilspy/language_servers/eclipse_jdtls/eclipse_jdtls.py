@@ -154,6 +154,7 @@ class EclipseJDTLS(LanguageServer):
             "linux-x64",
             "win-x64",
             "darwin-arm64",
+            "linux-musl-x64"
         ], "Only linux-x64 platform is supported for in multilspy at the moment"
 
         gradle_path = str(
