@@ -208,8 +208,13 @@ class PlatformUtils:
             platform_id = system_map[system] + "-" + machine_map[machine]
             if system == "Linux" and bitness == "64bit":
                 libc = platform.libc_ver()[0]
-                if libc != 'glibc':
+                # musl on arch is not detected, so handdetect it
+                if libc != 'glibc' and len(libc) > 0:
                     platform_id += "-" + libc
+                elif libc == '':
+                    # stat the /lib/ld-musl-x86_64.so.1
+                    if os.path.exists("/lib/ld-musl-x86_64.so.1"):
+                        platform_id += "-musl-x64"
             return PlatformId(platform_id)
         else:
             raise MultilspyException("Unknown platform: " + system + " " + machine + " " + bitness)
