@@ -523,7 +523,7 @@
                     "maven": {
                         "enabled": true,
                         "offline": {
-                            "enabled": false
+                            "enabled": true
                         },
                         "disableTestClasspathFlag": false
                     },
