@@ -8,10 +8,9 @@ on:
 # from https://actuated.dev/blog/multi-arch-docker-github-actions
 jobs:
   publish:
-     permissions:
-       packages: write
-
--   runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
         with:
