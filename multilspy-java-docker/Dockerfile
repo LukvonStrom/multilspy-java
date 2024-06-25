@@ -17,7 +17,7 @@ RUN apt-get update && \
 COPY setup.py .
 RUN python3 -m venv .env && \
     . .env/bin/activate && \
-    pip install -q --no-cache-dir requests https://github.com/LukvonStrom/monitors4codegen/archive/main.zip && \
+    pip install -q --no-cache-dir requests https://github.com/LukvonStrom/multilspy-java/archive/main.zip && \
     python setup.py install
 
 
