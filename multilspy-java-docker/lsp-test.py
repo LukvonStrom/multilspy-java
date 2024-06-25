@@ -148,16 +148,6 @@ async def main(filename: str) -> dict:
         return json_return
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process a file.')
-    parser.add_argument('-f', type=str, help='Path to the file')
-    parser.add_argument('-e', type=str, help="Whether there is an edit file in the mountable directory", required=False)
-
-    args = parser.parse_args()
-    print("args:", args)
-
-    inspection_file = Path("/repo") / Path(args.f)
-    print(f"Processing file: {inspection_file.absolute()}")
-
 
     # list recursively all files in the /input directory
     print("Input")
@@ -170,6 +160,20 @@ if __name__ == "__main__":
     print("-" * 80)
     for file in Path("/input").rglob("*"):
         print(file)
+
+        
+    parser = argparse.ArgumentParser(description='Process a file.')
+    parser.add_argument('-f', type=str, help='Path to the file')
+    parser.add_argument('-e', type=str, help="Whether there is an edit file in the mountable directory", required=False)
+
+    args = parser.parse_args()
+    print("args:", args)
+
+    inspection_file = Path("/repo") / Path(args.f)
+    print(f"Processing file: {inspection_file.absolute()}")
+
+
+    
     
     initial_status_file_content = asyncio.run(main(inspection_file.absolute()))
     initial_data_path = os.getenv("INITIAL_DATA_PATH", "/tmp/status.json")
