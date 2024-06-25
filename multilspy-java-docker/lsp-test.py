@@ -157,6 +157,19 @@ if __name__ == "__main__":
 
     inspection_file = Path("/repo") / Path(args.f)
     print(f"Processing file: {inspection_file.absolute()}")
+
+
+    # list recursively all files in the /input directory
+    print("Input")
+    print("-" * 80)
+    for file in Path("/input").rglob("*"):
+        print(file)
+
+
+    print("Repo")
+    print("-" * 80)
+    for file in Path("/input").rglob("*"):
+        print(file)
     
     initial_status_file_content = asyncio.run(main(inspection_file.absolute()))
     initial_data_path = os.getenv("INITIAL_DATA_PATH", "/tmp/status.json")
