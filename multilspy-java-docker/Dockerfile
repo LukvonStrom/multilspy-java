@@ -26,10 +26,12 @@ RUN python3 -m venv .env && \
 # Copy the test script
 COPY lsp-test.py .
 
+COPY setup.sh .
+
 VOLUME [ "/mnt/data", "/mnt/input", "/mnt/repo" ]
 
-ENV INITIAL_DATA_PATH "/mnt/data/initial.json"
-ENV EDIT_DATA_PATH "/mnt/data/edit.json"
+ENV INITIAL_DATA_PATH="/mnt/data/initial.json"
+ENV EDIT_DATA_PATH="/mnt/data/edit.json"
 
 COPY init.sh /app/init.sh
 RUN chmod +x /app/init.sh

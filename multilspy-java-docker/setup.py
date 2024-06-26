@@ -11,7 +11,7 @@ logging.basicConfig(
 async def main():
     config = MultilspyConfig.from_dict({"code_language": "java", "trace_lsp_communication": True})
     logger = MultilspyLogger()
-    lsp = LanguageServer.create(config, logger, ".")
+    lsp = LanguageServer.create(config, logger, "/mnt/repo")
 
     # Using async context manager for starting the server
     async with lsp.start_server() as server:
