@@ -18,8 +18,9 @@ COPY setup.py .
 COPY download.py .
 RUN python3 -m venv .env && \
     . .env/bin/activate && \
-    pip install -q --no-cache-dir requests https://github.com/LukvonStrom/multilspy-java/archive/main.zip && \
-    python download.py
+    pip install -q --no-cache-dir requests https://github.com/LukvonStrom/multilspy-java/archive/main.zip 
+    # && \
+    # python download.py
 
 
 
