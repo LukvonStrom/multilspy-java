@@ -10,12 +10,13 @@ from monitors4codegen.multilspy.multilspy_logger import MultilspyLogger
 from pathlib import Path, PurePath
 import logging
 import argparse
-# logging.basicConfig(
-#     level=os.environ.get('LOGLEVEL', 'DEBUG').upper()
-# )
+import time
+logging.basicConfig(
+    level=os.environ.get('LOGLEVEL', 'DEBUG').upper()
+)
 
 
-BASE_OPERATION_DIR = "/repo"
+BASE_OPERATION_DIR = Path("/mnt/repo")
 
 json_return = {"diagnostics": [], 'error': None, "warnings": []}
 
@@ -52,7 +53,7 @@ async def main(filename: str) -> dict:
     try:
         config = MultilspyConfig.from_dict({"code_language": "java", "trace_lsp_communication": True})
         logger = MultilspyLogger()
-        lsp = LanguageServer.create(config, logger, BASE_OPERATION_DIR)
+        lsp = LanguageServer.create(config, logger, BASE_OPERATION_DIR.as_posix())
 
         reregister_eventhandler(lsp, "window/logMessage", process_log)
         reregister_eventhandler(lsp, "textDocument/publishDiagnostics", process_diagnostics)
@@ -109,8 +110,8 @@ async def main(filename: str) -> dict:
 
                 server.insert_text_at_position(completions_filepath, line=tinker_lineno, column=tinker_col+1, text_to_be_inserted=deleted_text)
                 await server.completions_available.wait()
-                for i in range(line_end_col):
-                    await lsp.request_hover(completions_filepath, tinker_lineno, i)
+                # for i in range(line_end_col):
+                #     await lsp.request_hover(completions_filepath, tinker_lineno, i)
                 
                 open_file_buffer = lsp.open_file_buffers[
                     pathlib.Path(os.path.join(lsp.repository_root_path, completions_filepath)).as_uri()
@@ -148,42 +149,35 @@ async def main(filename: str) -> dict:
         return json_return
 
 if __name__ == "__main__":
-
-    # list recursively all files in the /input directory
-    print("Input")
-    print("-" * 80)
-    for file in Path("/input").rglob("*"):
-        print(file)
-
-
-    print("Repo")
-    print("-" * 80)
-    for file in Path("/input").rglob("*"):
-        print(file)
-
-        
+    start_time = time.time()
     parser = argparse.ArgumentParser(description='Process a file.')
     parser.add_argument('-f', type=str, help='Path to the file')
     parser.add_argument('-e', type=str, help="Whether there is an edit file in the mountable directory", required=False)
 
     args = parser.parse_args()
-    print("args:", args)
+    print("args:", args, flush=True)
 
-    inspection_file = Path("/repo") / Path(args.f)
-    print(f"Processing file: {inspection_file.absolute()}")
+    inspection_file = BASE_OPERATION_DIR / Path(args.f)
+    print(f"Processing file: {inspection_file.absolute()}", flush=True)
 
 
     
     
     initial_status_file_content = asyncio.run(main(inspection_file.absolute()))
     initial_data_path = os.getenv("INITIAL_DATA_PATH", "/tmp/status.json")
-    print(f"Writing initial status to: {initial_data_path}")
+    print(f"Writing initial status to: {initial_data_path}", flush=True)
+
+
+    print(f"Execution time: {time.time() - start_time} seconds", flush=True)
+
+    start_time = time.time()
+
     with open(initial_data_path, 'w', encoding="utf-8") as f:
         f.write(json.dumps(initial_status_file_content, indent=4))
 
 
     if args.e and args.e.lower() == "yes":
-        editpath = Path("/input") / inspection_file.name
+        editpath = Path("/mnt/input") / inspection_file.name
         print(f"Checking for edit file at: {editpath}")
         if editpath.exists():
             os.remove(inspection_file)
@@ -200,6 +194,7 @@ if __name__ == "__main__":
             edit_status_file_content = asyncio.run(main(inspection_file.absolute()))
             edit_data_path = os.getenv("EDIT_DATA_PATH", "/tmp/edit_status.json")
             print(f"Writing edit status to: {edit_data_path}")
+            print(f"2nd Execution time: {time.time() - start_time} seconds", flush=True)
 
             
             edit_diag_count = len(edit_status_file_content['diagnostics'])
