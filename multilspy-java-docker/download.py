@@ -18,7 +18,9 @@ async def main():
 
     # Using async context manager for starting the server
     async with lsp.start_server() as server:
-        print("Server started")
+        print("Server started", flush=True)
+        await lsp.server.shutdown()
+        exit(0)
 
 
 if __name__ == "__main__":
