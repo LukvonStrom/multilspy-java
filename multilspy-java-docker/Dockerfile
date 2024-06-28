@@ -16,11 +16,12 @@ RUN apt-get update && \
 # Set up the Python environment and install dependencies
 COPY setup.py .
 COPY download.py .
+RUN mkdir -p /tmp/repo
+RUN python3 --version
 RUN python3 -m venv .env && \
     . .env/bin/activate && \
-    pip install -q --no-cache-dir requests https://github.com/LukvonStrom/multilspy-java/archive/main.zip 
-    # && \
-    # python download.py
+    pip install -q --no-cache-dir requests https://github.com/LukvonStrom/multilspy-java/archive/main.zip && \
+    python download.py
 
 
 
@@ -34,6 +35,10 @@ VOLUME [ "/mnt/data", "/mnt/input", "/mnt/repo" ]
 
 ENV INITIAL_DATA_PATH="/mnt/data/initial.json"
 ENV EDIT_DATA_PATH="/mnt/data/edit.json"
+
+ENV LOGLEVEL="DEBUG"
+
+ENV TIMEOUT_MINS=5
 
 COPY init.sh /app/init.sh
 RUN chmod +x /app/init.sh

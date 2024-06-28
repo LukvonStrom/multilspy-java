@@ -10,18 +10,14 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG").upper())
 
 
 async def main():
+    print("Downloading Java Language Server", flush=True)
     config = MultilspyConfig.from_dict(
         {"code_language": "java", "trace_lsp_communication": True}
     )
     logger = MultilspyLogger()
-    lsp = LanguageServer.create(config, logger, ".")
-
-    # Using async context manager for starting the server
-    async with lsp.start_server() as server:
-        print("Server started", flush=True)
-        await lsp.server.shutdown()
-        exit(0)
-
+    LanguageServer.create(config, logger, "/tmp/repo")
+    print("Finished Downloading Java Language Server", flush=True)
+    exit(0)
 
 if __name__ == "__main__":
     asyncio.run(main())
