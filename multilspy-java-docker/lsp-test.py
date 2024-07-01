@@ -172,6 +172,7 @@ async def main(filename: str) -> dict:
             )
             return json_return
     except Exception as e:
+        json_return = {"diagnostics": [], "error": None, "warnings": []}
         print("-> -> -> Error occured", e)
         json_return["error"] = str(e)
         # print(json_return)
