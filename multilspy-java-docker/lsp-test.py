@@ -245,4 +245,5 @@ if __name__ == "__main__":
                 raise FileNotFoundError(f"Edit file {editpath} not found")
         finally:
             restore_original_file(inspection_file, backup_file_path)
+            os.remove(backup_file_path)
             print(f"2nd Execution time: {time.time() - start_time} seconds", flush=True)
