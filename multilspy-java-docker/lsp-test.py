@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 
+from shutil import copyfile
 from pathlib import Path, PurePath
 import logging
 import argparse
@@ -27,60 +28,60 @@ def reregister_eventhandler(lsp: LanguageServer, event: str, callback: callable)
     lsp.server.on_notification_handlers[event] = callback
 
 
-
 @asynccontextmanager
-async def setup_lsp_server(completions_filepath: str):  
-        json_return = {"diagnostics": [], "error": None, "warnings": []}
+async def setup_lsp_server(completions_filepath: str):
+    json_return = {"diagnostics": [], "error": None, "warnings": []}
 
-        async def process_diagnostics(diag):
-            irrelevant_strings = [
-                "Build path specifies execution environment",
-                "The compiler compliance specified is",
-            ]
-            if len(diag.get("diagnostics", [])) > 0:
-                for d in diag.get("diagnostics", []):
-                    if any(
-                        [
-                            irrelevant_string in d.get("message", "")
-                            for irrelevant_string in irrelevant_strings
-                        ]
-                    ):
-                        continue
-                    json_return["diagnostics"].append(d)
+    async def process_diagnostics(diag):
+        irrelevant_strings = [
+            "Build path specifies execution environment",
+            "The compiler compliance specified is",
+        ]
+        if len(diag.get("diagnostics", [])) > 0:
+            for d in diag.get("diagnostics", []):
+                if any(
+                    [
+                        irrelevant_string in d.get("message", "")
+                        for irrelevant_string in irrelevant_strings
+                    ]
+                ):
+                    continue
+                json_return["diagnostics"].append(d)
 
-        class PartialFileLogger(MultilspyLogger):
-            def log(self, debug_message: str, level: int, sanitized_error_message: str = "") -> None:
-                """
-                Log the debug and santized messages using the logger
-                """
-                debug_message = debug_message.replace("'", '"').replace("\n", " ")
+    class PartialFileLogger(MultilspyLogger):
+        def log(
+            self, debug_message: str, level: int, sanitized_error_message: str = ""
+        ) -> None:
+            """
+            Log the debug and santized messages using the logger
+            """
+            debug_message = debug_message.replace("'", '"').replace("\n", " ")
 
-                if level == 1:
+            if level == 1:
                 # or loglevel == "DEBUG":
-                    json_return["warnings"].append({"debug_message": debug_message})
+                json_return["warnings"].append({"debug_message": debug_message})
 
-                super().log(debug_message, level, sanitized_error_message)
+            super().log(debug_message, level, sanitized_error_message)
 
-        config = MultilspyConfig.from_dict(
-            {"code_language": "java", "trace_lsp_communication": True}
-        )
-        logger = PartialFileLogger()
-        lsp = LanguageServer.create(config, logger, BASE_OPERATION_DIR.as_posix())
+    config = MultilspyConfig.from_dict(
+        {"code_language": "java", "trace_lsp_communication": True}
+    )
+    logger = PartialFileLogger()
+    lsp = LanguageServer.create(config, logger, BASE_OPERATION_DIR.as_posix())
 
+    reregister_eventhandler(lsp, "textDocument/publishDiagnostics", process_diagnostics)
+
+    print("Starting server...")
+
+    # Using async context manager for starting the server
+    async with lsp.start_server() as server:
+        print("-" * 80)
         reregister_eventhandler(
             lsp, "textDocument/publishDiagnostics", process_diagnostics
         )
+        with server.open_file(completions_filepath):
+            yield (lsp, server, json_return)
 
-        print("Starting server...")
-
-        # Using async context manager for starting the server
-        async with lsp.start_server() as server:
-            print("-" * 80)
-            reregister_eventhandler(
-                lsp, "textDocument/publishDiagnostics", process_diagnostics
-            )
-            with server.open_file(completions_filepath):
-                yield (lsp, server, json_return)
 
 async def main(filename: str) -> dict:
     try:
@@ -131,9 +132,7 @@ async def main(filename: str) -> dict:
                 tinker_col + 1,
                 allow_incomplete=True,
             )
-            completions = [
-                completion["completionText"] for completion in completions
-            ]
+            completions = [completion["completionText"] for completion in completions]
 
             server.insert_text_at_position(
                 completions_filepath,
@@ -179,10 +178,16 @@ async def main(filename: str) -> dict:
         return json_return
 
 
+def restore_original_file(original_file_path: str, backup_file_path: str):
+    copyfile(backup_file_path, original_file_path)
+
+
 async def main_timeouted(filename: str):
     return await asyncio.wait_for(main(filename), timeout=TIMEOUT_MINUTES * 60)
 
+
 if __name__ == "__main__":
+
     start_time = time.time()
     parser = argparse.ArgumentParser(description="Process a file.")
     parser.add_argument("-f", type=str, help="Path to the file")
@@ -199,8 +204,9 @@ if __name__ == "__main__":
     inspection_file = BASE_OPERATION_DIR / Path(args.f)
     print(f"Processing file: {inspection_file.absolute()}", flush=True)
 
-    
-    initial_status_file_content = asyncio.run(main_timeouted(inspection_file.absolute()))
+    initial_status_file_content = asyncio.run(
+        main_timeouted(inspection_file.absolute())
+    )
     initial_data_path = os.getenv("INITIAL_DATA_PATH", "/tmp/status.json")
     print(f"Writing initial status to: {initial_data_path}", flush=True)
 
@@ -212,30 +218,31 @@ if __name__ == "__main__":
     with open(initial_data_path, "w", encoding="utf-8") as f:
         f.write(json.dumps(initial_status_file_content, indent=4))
 
-
-    if args.e and args.e.lower() == "yes":
+    if args.e and (args.e.lower() == "yes" or args.e.lower() == "y"):
+        backup_file_path = f"{inspection_file}.backup"
+        copyfile(inspection_file, backup_file_path)
         editpath = Path("/mnt/input") / inspection_file.name
-        print(f"Checking for edit file at: {editpath}")
-        if editpath.exists():
-            os.remove(inspection_file)
-            print(f"Deleted file: {inspection_file}")
-            with open(editpath, "r", encoding="utf-8") as edit_file:
-                edit_content = edit_file.read()
-                with open(inspection_file, "w", encoding="utf-8") as file:
-                    file.write(edit_content)
+        try:
+            print(f"Checking for edit file at: {editpath}")
+            if editpath.exists():
+                copyfile(editpath, inspection_file)
+                edit_status_file_content = asyncio.run(
+                    main_timeouted(inspection_file.absolute())
+                )
 
-            edit_status_file_content = asyncio.run(main_timeouted(inspection_file.absolute()))
-            edit_data_path = os.getenv("EDIT_DATA_PATH", "/tmp/edit_status.json")
-            print(f"Writing edit status to: {edit_data_path}")
+                edit_data_path = os.getenv("EDIT_DATA_PATH", "/tmp/edit_status.json")
+                print(f"Writing edit status to: {edit_data_path}")
+
+                edit_diag_count = len(edit_status_file_content["diagnostics"])
+
+                print(
+                    f"Initial file had {initial_diag_count} diagnostics, now we have {edit_diag_count} diagnostics"
+                )
+
+                with open(edit_data_path, "w", encoding="utf-8") as f:
+                    f.write(json.dumps(edit_status_file_content, indent=4))
+            else:
+                raise FileNotFoundError(f"Edit file {editpath} not found")
+        finally:
+            restore_original_file(inspection_file, backup_file_path)
             print(f"2nd Execution time: {time.time() - start_time} seconds", flush=True)
-
-            edit_diag_count = len(edit_status_file_content["diagnostics"])
-
-            print(
-                f"Initial file had {initial_diag_count} diagnostics, now we have {edit_diag_count} diagnostics"
-            )
-
-            with open(edit_data_path, "w", encoding="utf-8") as f:
-                f.write(json.dumps(edit_status_file_content, indent=4))
-        else:
-            raise FileNotFoundError(f"Edit file {editpath} not found")

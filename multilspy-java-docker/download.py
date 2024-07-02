@@ -19,5 +19,6 @@ async def main():
     print("Finished Downloading Java Language Server", flush=True)
     exit(0)
 
+
 if __name__ == "__main__":
     asyncio.run(main())
