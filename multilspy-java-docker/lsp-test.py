@@ -36,6 +36,7 @@ async def setup_lsp_server(completions_filepath: str):
         irrelevant_strings = [
             "Build path specifies execution environment",
             "The compiler compliance specified is",
+            "At least one of the problems in category 'unused' is not analysed due to a compiler option being ignored"
         ]
         if len(diag.get("diagnostics", [])) > 0:
             for d in diag.get("diagnostics", []):
