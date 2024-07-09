@@ -26,8 +26,7 @@ RUN python3 -m venv .env && \
 
 
 
-# Copy the test script
-COPY lsp-test.py .
+COPY *.py /app/
 
 COPY setup.sh .
 
@@ -36,9 +35,9 @@ VOLUME [ "/mnt/data", "/mnt/input", "/mnt/repo" ]
 ENV INITIAL_DATA_PATH="/mnt/data/initial.json"
 ENV EDIT_DATA_PATH="/mnt/data/edit.json"
 
-ENV LOGLEVEL="DEBUG"
+ENV BASE_OPERATION_DIR="/mnt/repo"
 
-ENV TIMEOUT_MINS=5
+ENV LOGLEVEL="DEBUG"
 
 COPY init.sh /app/init.sh
 RUN chmod +x /app/init.sh

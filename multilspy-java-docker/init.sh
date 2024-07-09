@@ -4,4 +4,4 @@
 source .env/bin/activate
 
 # Run the Python script with all passed arguments
-python lsp-test.py "$@"
+python cli_entrypoint.py "$@"

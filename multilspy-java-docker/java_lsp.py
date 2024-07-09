@@ -1,16 +1,10 @@
-import asyncio
-from contextlib import asynccontextmanager, contextmanager
-import json
+from contextlib import asynccontextmanager
 import os
 import pathlib
 
-from shutil import copyfile
 from pathlib import Path, PurePath
 import logging
-import argparse
-import time
 from monitors4codegen.multilspy import LanguageServer
-from monitors4codegen.multilspy.lsp_protocol_handler.lsp_requests import LspRequest
 from monitors4codegen.multilspy.lsp_protocol_handler.lsp_types import Position
 from monitors4codegen.multilspy.multilspy_config import MultilspyConfig
 from monitors4codegen.multilspy.multilspy_logger import MultilspyLogger
@@ -19,8 +13,8 @@ from monitors4codegen.multilspy.multilspy_logger import MultilspyLogger
 loglevel = os.environ.get("LOGLEVEL", "DEBUG").upper()
 logging.basicConfig(level=loglevel)
 
-TIMEOUT_MINUTES = int(os.environ.get("TIMEOUT_MINS", 5))
-BASE_OPERATION_DIR = Path("/mnt/repo")
+
+BASE_OPERATION_DIR = Path(os.getenv("BASE_OPERATION_DIR", "/mnt/repo"))
 
 
 def reregister_eventhandler(lsp: LanguageServer, event: str, callback: callable):
@@ -36,7 +30,7 @@ async def setup_lsp_server(completions_filepath: str):
         irrelevant_strings = [
             "Build path specifies execution environment",
             "The compiler compliance specified is",
-            "At least one of the problems in category 'unused' is not analysed due to a compiler option being ignored"
+            "At least one of the problems in category 'unused' is not analysed due to a compiler option being ignored",
         ]
         if len(diag.get("diagnostics", [])) > 0:
             for d in diag.get("diagnostics", []):
@@ -96,7 +90,6 @@ async def main(filename: str) -> dict:
                 file_content = cur_op_file.read()
                 lines = file_content.split("\n")
 
-                # find line with . and get the line number
                 tinker_line_indexes = [
                     i
                     for i, line in enumerate(lines)
@@ -111,8 +104,6 @@ async def main(filename: str) -> dict:
                 tinker_col = tinker_line.index("(")
                 line_end_col = len(tinker_line) - 1
                 remove_text = tinker_line[(tinker_col + 1) : line_end_col]
-
-                # print("tinker_col", tinker_col, "line_end_col", line_end_col, "remove_text", remove_text)
 
             # tinker_line = 41
             deleted_text = server.delete_text_between_positions(
@@ -142,8 +133,6 @@ async def main(filename: str) -> dict:
                 text_to_be_inserted=deleted_text,
             )
             await server.completions_available.wait()
-            # for i in range(line_end_col):
-            #     await lsp.request_hover(completions_filepath, tinker_lineno, i)
 
             open_file_buffer = lsp.open_file_buffers[
                 pathlib.Path(
@@ -151,13 +140,11 @@ async def main(filename: str) -> dict:
                 ).as_uri()
             ]
 
-            textDocument = {"textDocument": {"uri": open_file_buffer.uri}}
-            # await lsp.server.send.workspace_diagnostic({})
-            # await lsp.server.send.text_document_diagnostic(params=textDocument)
+            text_document = {"textDocument": {"uri": open_file_buffer.uri}}
 
-            lsp.server.notify.will_save_text_document(params=textDocument)
-            lsp.server.notify.did_save_text_document(params=textDocument)
-            # await lsp.server.run_forever()
+            lsp.server.notify.will_save_text_document(params=text_document)
+            lsp.server.notify.did_save_text_document(params=text_document)
+
             await lsp.server.send.execute_command(
                 {
                     "command": "java.project.refreshDiagnostics",
@@ -175,76 +162,4 @@ async def main(filename: str) -> dict:
         json_return = {"diagnostics": [], "error": None, "warnings": []}
         print("-> -> -> Error occured", e)
         json_return["error"] = str(e)
-        # print(json_return)
         return json_return
-
-
-def restore_original_file(original_file_path: str, backup_file_path: str):
-    copyfile(backup_file_path, original_file_path)
-
-
-async def main_timeouted(filename: str):
-    return await asyncio.wait_for(main(filename), timeout=TIMEOUT_MINUTES * 60)
-
-
-if __name__ == "__main__":
-
-    start_time = time.time()
-    parser = argparse.ArgumentParser(description="Process a file.")
-    parser.add_argument("-f", type=str, help="Path to the file")
-    parser.add_argument(
-        "-e",
-        type=str,
-        help="Whether there is an edit file in the mountable directory",
-        required=False,
-    )
-
-    args = parser.parse_args()
-    print("args:", args, flush=True)
-
-    inspection_file = BASE_OPERATION_DIR / Path(args.f)
-    print(f"Processing file: {inspection_file.absolute()}", flush=True)
-
-    initial_status_file_content = asyncio.run(
-        main_timeouted(inspection_file.absolute())
-    )
-    initial_data_path = os.getenv("INITIAL_DATA_PATH", "/tmp/status.json")
-    print(f"Writing initial status to: {initial_data_path}", flush=True)
-
-    print(f"Execution time: {time.time() - start_time} seconds", flush=True)
-
-    start_time = time.time()
-
-    initial_diag_count = len(initial_status_file_content["diagnostics"])
-    with open(initial_data_path, "w", encoding="utf-8") as f:
-        f.write(json.dumps(initial_status_file_content, indent=4))
-
-    if args.e and (args.e.lower() == "yes" or args.e.lower() == "y"):
-        backup_file_path = f"{inspection_file}.backup"
-        copyfile(inspection_file, backup_file_path)
-        editpath = Path("/mnt/input") / inspection_file.name
-        try:
-            print(f"Checking for edit file at: {editpath}")
-            if editpath.exists():
-                copyfile(editpath, inspection_file)
-                edit_status_file_content = asyncio.run(
-                    main_timeouted(inspection_file.absolute())
-                )
-
-                edit_data_path = os.getenv("EDIT_DATA_PATH", "/tmp/edit_status.json")
-                print(f"Writing edit status to: {edit_data_path}")
-
-                edit_diag_count = len(edit_status_file_content["diagnostics"])
-
-                print(
-                    f"Initial file had {initial_diag_count} diagnostics, now we have {edit_diag_count} diagnostics"
-                )
-
-                with open(edit_data_path, "w", encoding="utf-8") as f:
-                    f.write(json.dumps(edit_status_file_content, indent=4))
-            else:
-                raise FileNotFoundError(f"Edit file {editpath} not found")
-        finally:
-            restore_original_file(inspection_file, backup_file_path)
-            os.remove(backup_file_path)
-            print(f"2nd Execution time: {time.time() - start_time} seconds", flush=True)
