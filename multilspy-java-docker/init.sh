@@ -4,4 +4,4 @@
 source .env/bin/activate
 
 # Run the Python script with all passed arguments
-python cli_entrypoint.py "$@"
+timeout -k 10s 300s python cli_entrypoint.py "$@"

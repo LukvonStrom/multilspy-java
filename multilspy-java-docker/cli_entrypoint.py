@@ -42,10 +42,8 @@ def cli_entrypoint():
     args = parser.parse_args()
     print("args:", args, flush=True)
 
-    if args.t and int(args.t) > 0:
-        timeout_minutes = args.t
-    else:
-        timeout_minutes = 5
+
+    timeout_minutes = 5
 
     inspection_file = BASE_OPERATION_DIR / Path(args.f)
     print(f"Processing file: {inspection_file.absolute()}", flush=True)
@@ -99,3 +97,28 @@ def cli_entrypoint():
 
 if __name__ == "__main__":
     cli_entrypoint()
+
+
+# mvn test -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.event=info -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer=error
+
+
+# [DEBUG] incrementalBuildHelper#beforeRebuildExecution
+# [INFO] Compiling
+# [DEBUG] incrementalBuildHelper#afterRebuildExecution
+
+# [INFO] -------------------------------------------------------------
+# [ERROR] COMPILATION ERROR : 
+# [INFO] -------------------------------------------------------------
+
+# [INFO] -------------------------------------------------------
+# [INFO]  T E S T S
+# [INFO] -------------------------------------------------------
+
+# [INFO] Results:
+# [INFO] 
+# [INFO] Tests run:
+
+
+# [INFO] BUILD SUCCESS
+
+# [INFO] BUILD FAILURE
