@@ -51,8 +51,8 @@ def cli_entrypoint():
     backup_file_path = f"{inspection_file}.backup"
     copyfile(inspection_file, backup_file_path)
 
-    initial_status_file_content = asyncio.run(
-        main_timeouted(inspection_file.absolute(), timeout_minutes)
+    initial_status_file_content = asyncio.get_event_loop().run_until_complete(
+            main_timeouted(inspection_file.absolute(), timeout_minutes)
     )
     initial_data_path = os.getenv("INITIAL_DATA_PATH", "/tmp/status.json")
     print(f"Writing initial status to: {initial_data_path}", flush=True)
@@ -65,6 +65,8 @@ def cli_entrypoint():
     with open(initial_data_path, "w", encoding="utf-8") as f:
         f.write(json.dumps(initial_status_file_content, indent=4))
 
+    initial_has_error = initial_status_file_content and initial_status_file_content.get("error", "") is not None and len(initial_status_file_content.get("error", "")) > 0
+
     if args.e and (args.e.lower() == "yes" or args.e.lower() == "y"):
 
         editpath = Path("/mnt/input") / inspection_file.name
@@ -72,7 +74,7 @@ def cli_entrypoint():
             print(f"Checking for edit file at: {editpath}")
             if editpath.exists():
                 copyfile(editpath, inspection_file)
-                edit_status_file_content = asyncio.run(
+                edit_status_file_content = asyncio.get_event_loop().run_until_complete(
                     main_timeouted(inspection_file.absolute(), timeout_minutes)
                 )
 
@@ -93,6 +95,10 @@ def cli_entrypoint():
             restore_original_file(inspection_file, backup_file_path)
             os.remove(backup_file_path)
             print(f"2nd Execution time: {time.time() - start_time} seconds", flush=True)
+        if initial_has_error or edit_status_file_content and edit_status_file_content.get("error", "") is not None  and len(edit_status_file_content.get("error", "")) > 0:
+            exit(1)
+    elif initial_has_error:
+        exit(1)
 
 
 if __name__ == "__main__":
